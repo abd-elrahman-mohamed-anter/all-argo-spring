@@ -1,10 +1,10 @@
 # Spring PetClinic + ArgoCD + Prometheus/Grafana on EKS
 
-This project is a complete setup including:
-- **Spring PetClinic Application** (Fullstack Java/Spring Boot)
-- **GitOps with ArgoCD** to manage and deploy applications
-- **Monitoring** with Prometheus and Grafana
-- **Infrastructure as Code** using Terraform to deploy on EKS
+This project is a full-stack setup including:
+- **Spring PetClinic Application** (Java/Spring Boot)
+- **GitOps with ArgoCD** for application deployment and management
+- **Monitoring** using Prometheus and Grafana
+- **Infrastructure as Code** with Terraform on EKS
 
 ---
 
@@ -24,8 +24,6 @@ Access services internally via port forwarding:
 
 ![Port Forward](screens/portforward.png)
 
-
-
 ---
 
 ## 🐱 Spring PetClinic Application
@@ -40,46 +38,64 @@ Application interface after deployment on the cluster:
 
 ### ArgoCD Dashboard
 
-ArgoCD dashboard to manage applications:
+Manage applications and GitOps deployment via ArgoCD:
 
 ![ArgoCD 1](screens/argo-a.png)
 ![ArgoCD 2](screens/argo-b.png)
 
+**Sync Policy Options**:
+- **Manual**: Requires manual sync for changes
+- **Automated**: Auto-syncs when Git repository changes
+
+---
 
 ## 📊 Prometheus & Grafana
 
 ### Grafana Dashboard
 
-Monitoring dashboards for the application:
+Visualize metrics and dashboards:
 
 ![Grafana](screens/grafana.png)
 
 ### Prometheus Targets
 
-Current monitoring targets on Prometheus:
+Monitor application and cluster targets:
 
 ![Prometheus Target 1](screens/target1.png)
 ![Prometheus Target 2](screens/target2.png)
 
+**Accessing Dashboards via Port Forwarding**:
+
+```bash
+kubectl port-forward svc/prometheus-grafana 3000:80 -n prometheus
+kubectl port-forward svc/prometheus-kube-prometheus-prometheus 9090:9090 -n prometheus
+````
+
+**Default Grafana password**:
+
+```bash
+kubectl get secret prometheus-grafana -n prometheus -o jsonpath="{.data.admin-password}" | base64 --decode
+```
+
+---
 
 ## 🗂 Terraform (EKS)
 
-Infrastructure files are located inside:
+All infrastructure files are inside:
 
 ```
-
 EKS_Terraform/
-
-````
+```
 
 ### Key Files:
 
-- `main.tf` – VPC, Subnets, EKS Cluster configuration
-- `deployment.yml` – Spring application Deployment
-- `svc.yaml` – Spring application Service
-- `prometheus-values.yaml` – Helm values for Prometheus/Grafana
-- `spring-servicemonitor.yaml` – ServiceMonitor to monitor Spring app
-- `terraform.tfstate` & `terraform.tfstate.backup` – Terraform state (avoid pushing large files to GitHub)
+* `main.tf` – VPC, Subnets, EKS Cluster configuration
+* `deployment.yml` – Spring PetClinic Deployment
+* `svc.yaml` – Spring PetClinic Service
+* `prometheus-values.yaml` – Helm values for Prometheus/Grafana
+* `spring-servicemonitor.yaml` – ServiceMonitor to monitor Spring app
+* `.terraform/` – Local provider plugins (ignored in Git)
+* `terraform.tfstate` & `terraform.tfstate.backup` – Terraform state files (do not commit)
 
 ---
 
@@ -91,7 +107,7 @@ EKS_Terraform/
 cd EKS_Terraform
 terraform init
 terraform apply
-````
+```
 
 ### 2️⃣ Deploy Spring PetClinic
 
@@ -100,12 +116,22 @@ kubectl apply -f deployment.yml
 kubectl apply -f svc.yaml
 ```
 
-### 3️⃣ Manage Applications with ArgoCD
+### 3️⃣ Install Prometheus/Grafana via Helm
 
 ```bash
-argocd login <ARGOCD_SERVER>
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
 
-# Create and link the application to the repository
+helm upgrade --install prometheus prometheus-community/kube-prometheus-stack \
+  --namespace prometheus --create-namespace \
+  -f prometheus-values.yaml
+```
+
+### 4️⃣ Manage Applications with ArgoCD
+
+```bash
+argocd login <ARGOCD_SERVER> --username admin --password <PASSWORD>
+
 argocd app create spring-application \
   --repo <GIT_REPO_URL> \
   --path EKS_Terraform \
@@ -117,38 +143,29 @@ argocd app create spring-application \
 argocd app sync spring-application
 ```
 
-### 4️⃣ Access Grafana and Prometheus
+---
 
-* Via port forwarding:
+## 🔧 Notes & Best Practices
 
-```bash
-kubectl port-forward svc/prometheus-grafana 3000:80 -n prometheus
-kubectl port-forward svc/prometheus-kube-prometheus-prometheus 9090:9090 -n prometheus
-```
+* Avoid committing `.terraform/` and `terraform.tfstate` files due to size.
+* ServiceMonitor namespace must match Prometheus Operator namespace.
+* Helm charts allow customization via `prometheus-values.yaml`.
+* Prerequisites:
 
-* Then open in browser:
-
-  * Grafana: [http://localhost:3000](http://localhost:3000)
-  * Prometheus: [http://localhost:9090](http://localhost:9090)
-
-* Default Grafana password:
-
-```bash
-kubectl get secret prometheus-grafana -n prometheus -o jsonpath="{.data.admin-password}" | base64 --decode
-```
+  * `kubectl`
+  * `helm` >= 3
+  * `terraform` >= 1.0
+  * AWS CLI configured
+  * ArgoCD CLI (`argocd`)
+* To add new microservices, create a new Deployment/Service/ServiceMonitor and link to ArgoCD.
+* Screenshots for reference are inside `screens/` folder.
 
 ---
 
-## 🔧 Notes
-
-* **GitHub Repo Structure**:
+## 📁 GitHub Repo Structure
 
 ```
 EKS_Terraform/
 screens/
 README.md
 ```
-
-* Avoid committing `.terraform/` and `terraform.tfstate` due to size.
-
-* All Kubernetes manifests such as Deployments, Services, ServiceMonitor are inside `EKS_Terraform/`.
