@@ -140,5 +140,3 @@ kubectl apply -f EKS_Terraform/spring-servicemonitor.yaml
 
 * ServiceMonitor collects metrics from Spring PetClinic.
 * Metrics visible in Grafana dashboards.
-
-تحب أعملها لك كده؟
