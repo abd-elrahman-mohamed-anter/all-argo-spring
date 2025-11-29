@@ -16,6 +16,15 @@ High-level architecture of the project and its resources:
 ![Architecture](screens/all-b.png)
 ![Architecture](screens/all-c.png)
 
+---
+
+## 🔌 Port Forwarding
+
+Access services internally via port forwarding:
+
+![Port Forward](screens/portforward.png)
+
+
 
 ---
 
@@ -52,15 +61,6 @@ Current monitoring targets on Prometheus:
 ![Prometheus Target 1](screens/target1.png)
 ![Prometheus Target 2](screens/target2.png)
 
----
-
-## 🔌 Port Forwarding
-
-Access services internally via port forwarding:
-
-![Port Forward](screens/portforward.png)
-
----
 
 ## 🗂 Terraform (EKS)
 
