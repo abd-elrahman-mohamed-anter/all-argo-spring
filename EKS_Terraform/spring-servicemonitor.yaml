@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: spring-pet-monitor
+  namespace: prometheus     # ← نفس namespace اللي سطبت فيه Prometheus
+  labels:
+    release: prometheus     # ← نفس الـ release name للـ Helm chart
+spec:
+  selector:
+    matchLabels:
+      app: spring-label
+  namespaceSelector:
+    matchNames:
+      - default
+  endpoints:
+    - port: http
+      path: /actuator/prometheus
+      interval: 15s
