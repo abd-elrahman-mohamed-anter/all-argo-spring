@@ -1,142 +1,158 @@
-# 🏨 Spring PetClinic on EKS with ArgoCD, Prometheus & Grafana
+# Spring PetClinic + ArgoCD + Prometheus/Grafana on EKS
 
-## Overview
-
-This project deploys **Spring PetClinic** on **AWS EKS** using **Terraform**, with **ArgoCD** for GitOps-based deployment and **Prometheus + Grafana** for monitoring.
-
----
-
-## Table of Contents
-
-1. [Project Structure](#project-structure)
-2. [Prerequisites](#prerequisites)
-3. [Setup](#setup)
-
-   * [Terraform & EKS](#terraform--eks)
-   * [ArgoCD](#argocd)
-   * [Prometheus & Grafana](#prometheus--grafana)
-4. [Deployment](#deployment)
-5. [Accessing Services](#accessing-services)
-6. [Monitoring](#monitoring)
-7. [License](#license)
+This project is a complete setup including:
+- **Spring PetClinic Application** (Fullstack Java/Spring Boot)
+- **GitOps with ArgoCD** to manage and deploy applications
+- **Monitoring** with Prometheus and Grafana
+- **Infrastructure as Code** using Terraform to deploy on EKS
 
 ---
 
-## Project Structure
+## 🏗 Architecture
+
+High-level architecture of the project and its resources:
+
+![Architecture](screens/all-a.png)
+
+---
+
+## 🐱 Spring PetClinic Application
+
+Application interface after deployment on the cluster:
+
+![App](screens/app.png)
+
+---
+
+## 🚀 ArgoCD
+
+### ArgoCD Dashboard
+
+ArgoCD dashboard to manage applications:
+
+![ArgoCD 1](screens/argo-a.png)
+![ArgoCD 2](screens/argo-b.png)
+
+### Application Sync Status
+
+Shows the current sync status of applications:
+
+![Sync](screens/all-b.png)
+
+---
+
+## 📊 Prometheus & Grafana
+
+### Grafana Dashboard
+
+Monitoring dashboards for the application:
+
+![Grafana](screens/grafana.png)
+
+### Prometheus Targets
+
+Current monitoring targets on Prometheus:
+
+![Prometheus Target 1](screens/target1.png)
+![Prometheus Target 2](screens/target2.png)
+
+---
+
+## 🔌 Port Forwarding
+
+Access services internally via port forwarding:
+
+![Port Forward](screens/portforward.png)
+
+---
+
+## 🗂 Terraform (EKS)
+
+Infrastructure files are located inside:
 
 ```
-spring-petclinic/
-├── EKS_Terraform/            # Terraform configs for EKS cluster
-│   ├── main.tf
-│   ├── variables.tf
-│   ├── deployment.yml
-│   ├── svc.yaml
-│   ├── spring-servicemonitor.yaml
-│   └── prometheus-values.yaml
-├── k8s/                      # Kubernetes manifests (optional, can be managed via ArgoCD)
-├── src/                      # Spring PetClinic source code
-├── Dockerfile                # Dockerfile for Spring App
-├── docker-compose.yml
-├── Jenkinsfile               # CI/CD pipeline
-└── README.md
-```
+
+EKS_Terraform/
+
+````
+
+### Key Files:
+
+- `main.tf` – VPC, Subnets, EKS Cluster configuration
+- `deployment.yml` – Spring application Deployment
+- `svc.yaml` – Spring application Service
+- `prometheus-values.yaml` – Helm values for Prometheus/Grafana
+- `spring-servicemonitor.yaml` – ServiceMonitor to monitor Spring app
+- `terraform.tfstate` & `terraform.tfstate.backup` – Terraform state (avoid pushing large files to GitHub)
 
 ---
 
-## Prerequisites
+## ⚡ Usage
 
-* AWS CLI & IAM permissions for EKS
-* kubectl
-* Helm
-* Terraform
-* ArgoCD (installed on cluster or locally)
-
----
-
-## Setup
-
-### Terraform & EKS
-
-1. Initialize Terraform:
+### 1️⃣ Deploy the EKS Cluster with Terraform
 
 ```bash
 cd EKS_Terraform
 terraform init
-```
-
-2. Plan and apply:
-
-```bash
-terraform plan
 terraform apply
-```
+````
 
-This creates the EKS cluster and deploys your Kubernetes manifests.
-
----
-
-### ArgoCD
-
-1. Port-forward ArgoCD server:
+### 2️⃣ Deploy Spring PetClinic
 
 ```bash
-kubectl port-forward svc/argocd-server -n argocd 8080:443
+kubectl apply -f deployment.yml
+kubectl apply -f svc.yaml
 ```
 
-2. Login (default admin password from secret):
+### 3️⃣ Manage Applications with ArgoCD
 
 ```bash
-kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 --decode
+argocd login <ARGOCD_SERVER>
+
+# Create and link the application to the repository
+argocd app create spring-application \
+  --repo <GIT_REPO_URL> \
+  --path EKS_Terraform \
+  --dest-namespace default \
+  --dest-server https://kubernetes.default.svc \
+  --sync-policy automated
+
+# Sync the application
+argocd app sync spring-application
 ```
 
-3. Open browser at [https://localhost:8080](https://localhost:8080)
+### 4️⃣ Access Grafana and Prometheus
 
----
-
-### Prometheus & Grafana
-
-Installed via **Helm** in `prometheus` namespace.
-Check pods:
+* Via port forwarding:
 
 ```bash
-kubectl get all -n prometheus
+kubectl port-forward svc/prometheus-grafana 3000:80 -n prometheus
+kubectl port-forward svc/prometheus-kube-prometheus-prometheus 9090:9090 -n prometheus
 ```
 
-Port-forward Grafana:
+* Then open in browser:
+
+  * Grafana: [http://localhost:3000](http://localhost:3000)
+  * Prometheus: [http://localhost:9090](http://localhost:9090)
+
+* Default Grafana password:
 
 ```bash
-kubectl port-forward svc/prometheus-grafana -n prometheus 3000:80
-```
-
-Login to Grafana:
-
-* User: admin
-* Password: from Prometheus Helm secret or default (check via `kubectl get secret`)
-
----
-
-## Deployment
-
-Spring PetClinic is deployed via **Deployment + Service**:
-
-```bash
-kubectl apply -f EKS_Terraform/deployment.yml
-kubectl apply -f EKS_Terraform/svc.yaml
-kubectl apply -f EKS_Terraform/spring-servicemonitor.yaml
+kubectl get secret prometheus-grafana -n prometheus -o jsonpath="{.data.admin-password}" | base64 --decode
 ```
 
 ---
 
-## Accessing Services
+## 🔧 Notes
 
-* Spring PetClinic: `http://<LoadBalancer-IP>`
-* Grafana: `http://localhost:3000` (port-forward)
-* Prometheus: `http://localhost:9090` (port-forward)
-* ArgoCD: `https://localhost:8080` (port-forward)
+* **GitHub Repo Structure**:
 
----
+```
+EKS_Terraform/
+screens/
+README.md
+```
 
-## Monitoring
+* Avoid committing `.terraform/` and `terraform.tfstate` due to size.
 
-* ServiceMonitor collects metrics from Spring PetClinic.
-* Metrics visible in Grafana dashboards.
+* All Kubernetes manifests such as Deployments, Services, ServiceMonitor are inside `EKS_Terraform/`.
