@@ -1,0 +1,36 @@
+# ========================
+# Deployment: Spring PetClinic
+# ========================
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spring-pet
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spring-label
+  template:
+    metadata:
+      labels:
+        app: spring-label
+    spec:
+      containers:
+        - name: spring-cont
+          image: abdoomohamed/springpet-app:new
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "250m"
+              memory: "256Mi"
+          env:
+            - name: MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE
+              value: "prometheus,health,info"
+            - name: MANAGEMENT_ENDPOINT_PROMETHEUS_ENABLED
+              value: "true"
