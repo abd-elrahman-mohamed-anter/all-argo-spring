@@ -13,6 +13,9 @@ This project is a complete setup including:
 High-level architecture of the project and its resources:
 
 ![Architecture](screens/all-a.png)
+![Architecture](screens/all-b.png)
+![Architecture](screens/all-c.png)
+
 
 ---
 
@@ -33,13 +36,6 @@ ArgoCD dashboard to manage applications:
 ![ArgoCD 1](screens/argo-a.png)
 ![ArgoCD 2](screens/argo-b.png)
 
-### Application Sync Status
-
-Shows the current sync status of applications:
-
-![Sync](screens/all-b.png)
-
----
 
 ## 📊 Prometheus & Grafana
 
